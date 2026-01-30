@@ -1,0 +1,20 @@
+{
+  "name": "mind-map-tool",
+  "version": "1.0.0",
+  "description": "Interactive mind map tool for organizing life categories",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "d3": "^7.9.0"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  },
+  "keywords": ["mind-map", "d3", "interactive"],
+  "author": "",
+  "license": "MIT"
+}

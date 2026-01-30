@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mind Map Tool</title>
+  <style>
+    :root{
+      --bg-start: #fbfdff;
+      --bg-end: #f3f7fb;
+      --toolbar-bg: rgba(255,255,255,0.95);
+      --toolbar-border: #ddd;
+      --text-color: #222;
+      --hint-color: #444;
+      --svg-bg: linear-gradient(180deg,var(--bg-start),var(--bg-end));
+      --node-fill: #69b3a2;
+      --node-text: #ffffff;
+      --link-color: #999;
+      --node-stroke-selected: #333;
+      --button-bg: #f7f7f8;
+      --toolbar-width: 280px;
+    }
+
+    /* sidebar layout: toolbar becomes a left vertical panel */
+    body { margin: 0; padding-left: calc(var(--toolbar-width) + 24px); font-family: Inter, Roboto, -apple-system, sans-serif; color: var(--text-color); background: #fff; transition: background-color .2s, color .2s; }
+    body.dark {
+      --bg-start: #0f1724;
+      --bg-end: #0b1220;
+      --toolbar-bg: rgba(20,24,30,0.85);
+      --toolbar-border: rgba(255,255,255,0.06);
+      --text-color: #e6eef8;
+      --hint-color: #b7c3d9;
+      --svg-bg: linear-gradient(180deg,var(--bg-start),var(--bg-end));
+      --node-fill: #2b8f72;
+      --node-text: #eaf8f2;
+      --link-color: #4b5563;
+      --node-stroke-selected: #fff;
+      --button-bg: #0f1724;
+    }
+
+    .toolbar {
+      position: fixed;
+      left: 12px;
+      top: 12px;
+      bottom: 12px;
+      width: var(--toolbar-width);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 12px;
+      box-sizing: border-box;
+      border-radius: 12px;
+      align-items: stretch;
+      overflow-y: auto;
+      background: var(--toolbar-bg);
+      border: 1px solid var(--toolbar-border);
+      z-index: 20;
+      box-shadow: 0 10px 30px rgba(2,6,23,0.12);
+    }
+
+    .toolbar button {
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--toolbar-border);
+      background: var(--button-bg);
+      color: var(--text-color);
+      cursor: pointer;
+      text-align: left;
+      width: 100%;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-sizing: border-box;
+    }
+
+    .toolbar .hint { color: var(--hint-color); font-size: 13px; margin-top: 8px; opacity: 0.95; display: block; }
+
+    svg { width: calc(100vw - var(--toolbar-width) - 24px); height: 100vh; display: block; background: var(--svg-bg); }
+
+    @media (max-width: 900px) {
+      /* revert to top toolbar on narrow screens */
+      body { padding-left: 0; }
+      .toolbar { left: 12px; top: 12px; bottom: auto; width: calc(100% - 24px); height: auto; flex-direction: row; overflow-x: auto; border-radius: 8px; }
+      .toolbar button { width: auto; white-space: nowrap; }
+      svg { width: 100vw; }
+    }    .node circle { transition: stroke 120ms; fill: var(--node-fill); }
+    .node text { fill: var(--node-text); font-size: 12px; pointer-events: none; }
+    .links path { stroke: var(--link-color); stroke-opacity: 0.6; stroke-width: 2px; fill: none; stroke-linecap: round; }
+    .node.selected circle { stroke: var(--node-stroke-selected); stroke-width: 3px; }
+    .node.link-source circle { stroke: #ffb86b; stroke-width: 3px; }
+    .toolbar button.active { box-shadow: 0 6px 14px rgba(2,6,23,0.12); transform: translateY(-1px); }
+    .toolbar input[type="color"] { width: 36px; height: 28px; padding: 0; border: none; background: transparent; cursor: pointer; }
+    #searchInput { width: 100%; padding:6px 8px; border-radius:6px; border:1px solid var(--toolbar-border); background:transparent; color:var(--text-color); box-sizing:border-box; }
+    #tagInput { width: 100%; padding:6px 8px; border-radius:6px; border:1px solid var(--toolbar-border); background:transparent; color:var(--text-color); box-sizing:border-box; margin-top:6px }
+    #tagsContainer { display:flex; gap:6px; align-items:center; margin-top:6px }
+    .search-match circle { filter: drop-shadow(0 6px 14px rgba(255,220,80,0.18)); stroke: #ffd54a; stroke-width: 2px; }
+    .dim { opacity: 0.18; transition: opacity .25s; }
+    .tag-badge { background: rgba(255,255,255,0.04); color: var(--text-color); border-radius: 999px; padding: 4px 8px; margin-left:6px; border:1px solid var(--toolbar-border); cursor:pointer; font-size:12px; }
+    #inline-editor { position: fixed; z-index: 20; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--toolbar-border); background: var(--toolbar-bg); color: var(--text-color); box-shadow: 0 6px 20px rgba(2,6,23,0.12); font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button id="undoBtn" disabled>Undo</button>
+    <button id="redoBtn" disabled>Redo</button>
+    <button id="copyBtn">Copy</button>
+    <button id="pasteBtn">Paste</button>
+    <button id="linkBtn">Link</button>
+    <button id="linkStyleBtn">Link: Line</button>
+    <button id="attachImgBtn">Attach Image</button>
+    <input id="imgFile" type="file" accept="image/*" style="display:none" />
+    <button id="exportPngBtn">Export PNG</button>
+    <button id="exportSvgBtn">Export SVG</button>
+    <button id="importBtn">Import JSON</button>
+    <input id="importFile" type="file" accept=".json" style="display:none" />
+    <button id="saveAsBtn">Save As</button>
+    <button id="projectsBtn">Projects</button>
+    <button id="saveBtn">Save</button>
+    <button id="loadBtn">Load</button>
+    <button id="exportBtn">Export JSON</button>
+    <button id="clearBtn">Clear</button>
+    <button id="collapseBtn">Collapse</button>
+    <input id="searchInput" placeholder="Search or #tag" />
+    <input id="tagInput" placeholder="Add tag and press Enter" />
+    <div id="tagsContainer" style="display:inline-flex; gap:6px; align-items:center; margin-left:6px"></div>
+    <input id="colorPicker" type="color" title="Node color" />
+    <button id="themeBtn">Dark</button>
+    <span class="hint">Click node to select • Double‑click node to add child • L to link • Shift/Ctrl click to multi‑select • E to edit • Delete to remove</span>
+  </div>
+
+  <div id="app"></div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
